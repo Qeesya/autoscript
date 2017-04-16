@@ -33,7 +33,7 @@ cd /home/vps/public_html
 git init
 git remote add origin https://github.com/adenvt/OcsPanels.git
 git pull origin master
-#wget https://raw.githubusercontent.com/Qeesya/conf/master/OCS-Panel.tar
+#wget https://raw.githubusercontent.com/Qeesya/autoscript/conf/master/OCS-Panel.tar
 #tar xf OCS-Panel.tar
 rm index.html
 
