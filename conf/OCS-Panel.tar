@@ -1,0 +1,1362 @@
+OCS Panel Eng/0040777000000000000000000000000012732452670010162 5ustar00OCS Panel Eng/controller/0040777000000000000000000000000012732452646012350 5ustar00OCS Panel Eng/controller/admin/0040777000000000000000000000000012733315727013437 5ustar00OCS Panel Eng/controller/admin/seller.php0100777000000000000000000000413412732452642015435 0ustar00<?php 
+
+namespace Admin;
+
+class Seller extends \Home {
+
+	protected
+		$seller;
+
+	function beforeRoute($f3) {
+		parent::beforeRoute($f3);
+		if ( ! $this->me->isAdmin()) $f3->reroute('/logout');
+		$this->seller = new \User;
+	}
+
+	function All($f3) {
+		$sellers = $this->seller->find('type=2');
+		$f3->set('sellers',$sellers);
+		$f3->set('subcontent','admin/sellers.html');
+	}
+
+	function loadSeller() {
+		$f3 = \Base::instance();
+		$seller = $this->seller;
+		if ($f3->exists('PARAMS.id')) {
+			$id = $f3->get('PARAMS.id');
+			$seller->load(array('id=? AND type=2',$id));
+			$seller->reroute('/home/admin/seller');
+		}
+		return $seller;
+	}
+
+	function Id($f3) {
+		$seller = $this->loadSeller();
+		$f3->set('seller',$seller);
+		$f3->set('subcontent','admin/seller.html');
+	}
+
+	function Set($f3) {
+		$seller = $this->loadSeller();
+		if ($seller->dry()) {
+			$seller->load(array('username=?',$f3->get('POST.username')));
+			if ( ! $seller->dry()) {
+				$this->flash('This User Already Registered');
+				$f3->reroute('/home/admin/seller/add');
+			}
+		}
+		$seller->copyFrom('POST');
+		if ($f3->exists('POST.password',$pass)) {
+			if ( ! \Check::Confirm('POST.password')) {
+				$this->flash('Wrong Password Combination');
+				$f3->reroute($f3->get('URI'));
+			}
+			$seller->password = $pass;
+		}
+		$seller->save();
+		$this->flash('Stored Successfully','success');
+		$f3->reroute('/home/admin/seller/'.$seller->id);
+	}
+
+	function Lock($f3) {
+		$seller = $this->loadSeller();
+		$seller->active = $f3->get('PARAMS.active');
+		$seller->save();
+		$this->flash('Stored Successfully','success');
+		$f3->reroute('/home/admin/seller/'.$seller->id);
+	}
+
+	function Delete($f3) {
+		$seller = $this->loadSeller();
+		$seller->erase();
+		$this->flash('Seller has been Deleted','success');
+		$f3->reroute('/home/admin/seller/');
+	}
+
+	function Deposit($f3) {
+		$post 	= $f3->get('POST');
+		$seller = $this->seller;
+		$seller->load(array('id=?',$post['id']));
+		$seller->reroute('/home/admin/seller');
+		$seller->saldo = ($seller->saldo + $post['deposit']);
+		$seller->save();
+		$this->flash('Deposit Successfully','success');
+		$f3->reroute('/home/admin/seller');
+	}
+
+}
+OCS Panel Eng/controller/admin/server.php0100777000000000000000000000707312733315727015465 0ustar00<?php 
+
+namespace Admin;
+
+class Server extends \Home {
+
+	use \Helper\Server;
+
+	protected
+		$server;
+
+	function beforeRoute($f3) {
+		parent::beforeRoute($f3);
+		if ( ! $this->me->isAdmin()) $f3->reroute('/logout');
+		$this->server = new \Server;
+	}
+
+	function All($f3) {
+		$server = $this->server->find();
+		$f3->set('servers',$server);
+		$f3->set('subcontent','admin/servers.html');
+	}
+
+	function Id($f3) {
+		$server = $this->loadServer();
+		$f3->set('server',$server);
+		$f3->set('subcontent','admin/server.html');
+	}
+
+	function Set($f3) {
+		$server = $this->loadServer();
+		$server->copyFrom('POST');
+		$pass = $f3->get('POST.root_pass');
+		if ( ! empty($pass))
+			$server->setPass($pass);
+		$server->save();
+		$this->flash('Store Successfully','success');
+		$f3->reroute('/home/admin/server/'.$server->id);
+	}
+
+	function Lock($f3) {
+		$server = $this->loadServer();
+		$server->active = $f3->get('PARAMS.active');
+		$server->save();
+		$this->flash('Store Successfully','success');
+		$f3->reroute('/home/admin/server/'.$server->id);
+
+	}
+
+	function Delete($f3) {
+		$server = $this->loadServer();
+		$server->erase();
+		$this->flash('Server Delete Successfully','success');
+		$f3->reroute('/home/admin/server/');
+	}
+
+	function Accounts($f3) {
+		$server = $this->loadServer();
+		$webmin = new \Webmin($server);
+		$account = $webmin->find();
+		$f3->set('server',$server);
+		$f3->set('users',$account);
+		$f3->set('subcontent','admin/accounts.html');
+	}
+
+	function loadUser($server) {
+		$app = \Base::instance();
+		$webmin = new \webmin($server);
+		if ($app->exists('PARAMS.uid',$uid)) {
+			$webmin->load($uid);
+			$webmin->reroute('/home/admin/server/'.$server->id.'/account/');
+		}
+		return $webmin;
+	}
+
+	function Edit($f3) {
+		$server = $this->loadServer();
+		$account = $this->loadUser($server);
+		$f3->set('server',$server);
+		$f3->set('user',$account);
+		$f3->set('subcontent','admin/account.html');
+	}
+
+	function Apply($f3) {
+		$server = $this->loadServer();
+		$account = $this->loadUser($server);
+		if ($account->dry()) {
+			if ( ! $account->check($f3->get('POST.user'))) {
+				$this->flash('This User Already Registered');
+				$f3->reroute($f3->get('URI'));
+			}
+			$account->real = $this->me->username;
+		}
+		$account->copyFrom('POST');
+		if ($f3->exists('POST.pass',$pass)) {
+			if ( ! \Check::Confirm('POST.pass')) {
+				$this->flash('Wrong Password Combination');
+				$f3->reroute($f3->get('URI'));
+			}
+			$account->pass = $account->crypt($pass);
+		}
+		if ($f3->exists('POST.exp',$exp))
+			$account->expire = \Webmin::exp_encode($exp);
+		$account->save();
+		$this->flash('Store Successfully','success');
+		$f3->reroute('/home/admin/server/'.$server->id.'/account/'.$account->uid);
+	}
+
+	function Block($f3) {
+		$server = $this->loadServer();
+		$account = $this->loadUser($server);
+		if ($f3->exists('PARAMS.active',$active)) {
+			if ($active)
+				$account->pass = ltrim($account->pass,'!');
+			else
+				$account->pass = '!'.$account->pass;
+		}
+		$account->save();
+		$this->flash('Store Successfully','success');
+		$f3->reroute('/home/admin/server/'.$server->id.'/account/');
+	}
+
+	function Remove($f3) {
+		$server = $this->loadServer();
+		$account = $this->loadUser($server);
+		$account->erase();
+		$this->flash('Account Delete Successfully','success');
+		$f3->reroute('/home/admin/server/'.$server->id.'/account');
+	}
+// "create\:$svr['user']\:$svr['pass']\:$svr['uid']\:$svr['gid']\:$svr['real']\:$svr['home']\:$svr['shell']\:$svr['min']\:$svr['max']\:$svr['warn']\:$svr['inactive']\:$svr['expire']";
+}
+OCS Panel Eng/controller/check.php0100777000000000000000000000056712732452645014145 0ustar00<?php
+
+class Check {
+
+	static function confirm($post) {
+		$f3 = Base::instance();
+		return (bool)($f3->get($post)===$f3->get($post.'_confirmation'));
+	}
+
+	static function startwith($haystack, $needle) {
+    	return (bool)(substr($haystack, 0, strlen($needle)) === $needle);
+	}
+
+	static function pass($pass,$hash) {
+		return (bool)Bcrypt::instance()->verify($pass,$hash);
+	}
+}OCS Panel Eng/controller/controller.php0100777000000000000000000000072712732452645015251 0ustar00<?php
+
+class Controller {
+
+	function __construct() {
+		$f3 = Base::instance();
+        $f3->set('DATABASE', new DB\SQL($f3->DB_SET,$f3->DB_USER,$f3->DB_PASS));
+	}
+
+	function flash($data,$tipe='danger') {
+		$message = array('data'=>$data,'type'=>$tipe);
+		Base::instance()->set('SESSION.flash',$message);
+	}
+
+	function afterroute($f3) {
+		$f3->set('message',$f3->get('SESSION.flash'));
+		$f3->clear('SESSION.flash');
+		echo Template::instance()->render('base.html');
+	}
+
+}OCS Panel Eng/controller/helper/0040777000000000000000000000000012732452643013624 5ustar00OCS Panel Eng/controller/helper/crypt.php0100777000000000000000000000313712732452643015502 0ustar00<?php
+
+namespace Helper;
+
+class Crypt {
+
+    private $key;
+
+    function __construct($key){
+        $this->setKey($key);
+    }
+
+    public function encrypt($encrypt){
+        $encrypt = serialize($encrypt);
+        $iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC), MCRYPT_DEV_URANDOM);
+        $key = pack('H*', $this->key);
+        $mac = hash_hmac('sha256', $encrypt, substr($this->key, -32));
+        $passcrypt = mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, $encrypt . $mac, MCRYPT_MODE_CBC, $iv);
+        $encoded = base64_encode($passcrypt) . '|' . base64_encode($iv);
+        return $encoded;
+    }
+
+    public function decrypt($decrypt){
+        $decrypt = explode('|', $decrypt.'|');
+        $decoded = base64_decode($decrypt[0]);
+        $iv = base64_decode($decrypt[1]);
+        if(strlen($iv)!==mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC)){ return false; }
+        $key = pack('H*', $this->key);
+        $decrypted = trim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, $decoded, MCRYPT_MODE_CBC, $iv));
+        $mac = substr($decrypted, -64);
+        $decrypted = substr($decrypted, 0, -64);
+        $calcmac = hash_hmac('sha256', $decrypted, substr($this->key, -32));
+        if($calcmac !== $mac){
+            return false;
+        }
+        $decrypted = unserialize($decrypted);
+        return $decrypted;
+    }
+
+    public function setKey($key){
+        if(ctype_xdigit($key) && strlen($key) === 64){
+            $this->key = $key;
+        }else{
+            trigger_error('Invalid key. Key must be a 32-byte (64 character) hexadecimal string.', E_USER_ERROR);
+        }
+    }
+
+}OCS Panel Eng/controller/helper/server.php0100777000000000000000000000061412732452644015645 0ustar00<?php
+
+namespace Helper;
+
+trait Server {
+
+	function loadServer() {
+		$f3 = \Base::instance();
+		$server = $this->server;
+		if ($f3->exists('PARAMS.id',$id)) {
+			if ($this->me->isAdmin()) {
+				$server->id($id);
+				$server->reroute('/home/admin/server');
+			} else {
+				$server->load(array('id=? AND active=1',$id));
+				$server->reroute('/home/member/server');
+			}
+		}
+		return $server;
+	}
+
+}OCS Panel Eng/controller/home.php0100777000000000000000000000161612732452640014007 0ustar00<?php
+
+class Home extends Controller {
+
+	protected
+		$me;
+
+	function beforeRoute($f3) {
+		if ( ! $f3->exists('SESSION.id',$id)) $f3->reroute('/logout');
+		$me = new \User;
+		$me->id($id)->reroute('/logout');
+		$f3->set('me',$me);
+		$f3->set('content','home.html');
+		$this->me = $me;
+	}
+
+	function Index($f3) {
+		$f3->reroute('/home/setting');
+	}
+
+	function Setting($f3) {
+		$f3->set('subcontent','setting.html');
+	}
+
+	function NewPass($f3) {
+		$me = $this->me;
+		if ( ! Check::pass($f3->get('POST.oldpass'), $me->password)) {
+			$this->flash('Wrong Old Password');
+		} elseif ( ! Check::confirm('POST.password')) {
+			$this->flash('Wrong Password Combination');
+		} elseif ( ! $f3->exists('POST.password',$pass)) {
+			$this->flash('Password Cannot be Empty');
+		} else {
+			$me->password = $pass;
+			$me->save();
+			$this->flash('Change Password Succes','success');
+		}
+		$f3->reroute($f3->get('URI'));
+	}
+
+}
+OCS Panel Eng/controller/login.php0100777000000000000000000000133712732452644014173 0ustar00<?php
+
+class Login extends Controller {
+
+	function In($f3) {
+		if ($f3->exists('SESSION.id')) $f3->reroute('/home');
+		$f3->set('content','login.html');
+	}
+
+	function Post($f3) {
+		$name = $f3->get('POST.username');
+		$pass = $f3->get('POST.password');
+		$user = new \User;
+		$user->load(array('username=?',$name));
+		if ( ! $user->dry()) {
+			if ( ! $user->active == 1) {
+				$this->flash('Account Locked Temporarily');
+				$f3->reroute('/');
+			}
+			elseif (Check::pass($pass, $user->password)) {
+				$f3->set('SESSION.id',$user->id);
+				$f3->reroute('/home');
+			}
+		}
+		$this->flash('Wrong Username or Password, Please Try Again');
+		$f3->reroute('/');
+	}
+
+	function Out($f3) {
+		$f3->clear('SESSION');
+		$f3->reroute('/');
+	}
+
+}
+OCS Panel Eng/controller/member/0040777000000000000000000000000012732452646013617 5ustar00OCS Panel Eng/controller/member/server.php0100777000000000000000000000410112732452646015632 0ustar00<?php 
+
+namespace Member;
+
+class Server extends \Home {
+
+	use \Helper\Server;
+
+	protected
+		$server;
+
+	function beforeRoute($f3) {
+		parent::beforeRoute($f3);
+		if ( $this->me->isAdmin()) $f3->reroute('/home/admin/server/');
+		$this->server = new \Server;
+	}
+
+	function All($f3) {
+		$server = $this->server->find(array('active=1'));
+		$f3->set('servers',$server);
+		$f3->set('subcontent','member/servers.html');
+	}
+
+	function Id($f3) {
+		$server = $this->loadServer();
+		$f3->set('server',$server);
+		$f3->set('subcontent','member/server.html');
+	}
+
+	function Buy($f3) {
+		$server = $this->loadServer();
+		$account = new \Webmin($server);
+		if (($saldo = $this->me->saldo)<$server->price) {
+			$this->flash('Insufficient Credit, Please Contact Admin');
+			$f3->reroute($f3->get('URI'));
+		}
+		if ( ! $account->check($f3->get('POST.user'))) {
+			$this->flash('User Already Registered, Try Another ID');
+			$f3->reroute($f3->get('URI'));
+		}
+		$account->copyFrom('POST');
+		$account->real = $this->me->username;
+		if ($f3->exists('POST.pass',$pass)) {
+			if ( ! \Check::Confirm('POST.pass')) {
+				$this->flash('Wrong Password Combination');
+				$f3->reroute($f3->get('URI'));
+			}
+			$account->pass = $account->crypt($pass);
+		}
+		$active = date("Y/m/d",strtotime("+30 days"));
+		$account->expire = \Webmin::exp_encode($active);
+		if( ! $account->save()) {
+			$this->flash('Failed, Try in a few second');
+			$f3->reroute($f3->get('URI'));
+		}
+		$this->me->saldo = $this->me->saldo-$server->price;
+		$this->me->save();
+		$this->flash('Successfully Account Purchase','success');
+		$f3->set('SESSION.uid',$account->uid);
+		$f3->set('SESSION.pass',$pass);
+		$f3->reroute($f3->get('URI').'/success');
+	}
+
+	function Report($f3) {
+		$server = $this->loadServer();
+		if ( ! $f3->exists('SESSION.uid',$uid))
+			$f3->reroute('/home/member/server');
+		$account = new \Webmin($server);
+		$account->load($uid);
+		$account->pass = $f3->get('SESSION.pass');
+		$f3->set('server',$server);
+		$f3->set('user',$account);
+		$f3->set('subcontent','member/account.html');
+		$f3->clear('SESSION.uid');
+		$f3->clear('SESSION.pass');
+	}
+}
+OCS Panel Eng/view/0040777000000000000000000000000012732452663011136 5ustar00OCS Panel Eng/view/admin/0040777000000000000000000000000012735537400012222 5ustar00OCS Panel Eng/view/admin/account.html0100777000000000000000000001133312732452446014550 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">
+                <check if="{{ @user->uid }}">
+                    <true>
+                        Edit SSH User
+                        <a href="/home/admin/server/{{ @server->id }}/account/" class="btn btn-default pull-right"><i class="fa fa-arrow-left fa-fw"></i> Back</a>
+                    </true>
+                    <false>
+                        Add SSH User
+                    </false>
+                </check>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-user fa-fw"></i> Account Details
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="{{ @URI }}" method="POST">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input class="form-control" placeholder="Username" name="user" type="text" value="{{ @user->user }}" required>
+                        </div>
+                        <check if="{{ !@user->uid }}">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input class="form-control" placeholder="New Password" name="pass" type="password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Repeat Password</label>
+                                <input class="form-control" placeholder="Re-enter Password" name="pass_confirmation" type="password" required>
+                            </div>
+                        </check>
+                        <div class="form-group">
+                            <label>Exp</label>
+                            <div class="input-group date">
+                                <input type="text" class="form-control" name="exp" value="{{ @user->exp?@user->exp:date("Y/m/d",strtotime("+30 days")) }}">
+                                <span class="input-group-addon"><i class="fa fa-calendar fa-fw"></i></span>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary">Save</button>
+                        <check if="{{ @user->uid }}">
+                            <true>
+                                <check if="{{ @user->lock }}">
+                                    <true>
+                                        <a href="{{ @URI.'/active/1' }}" class="btn btn-success">Unlock</a>
+                                    </true>
+                                    <false>
+                                        <a href="{{ @URI.'/active/0' }}" class="btn btn-warning">Lock</a>
+                                    </false>
+                                </check>
+                                <a href="{{ @URI.'/delete' }}" class="btn btn-danger hapus">Delete</a>
+                            </true>
+                            <false>
+                                <a href="/home/admin/server/{{ @server->id }}/account/" class="btn btn-default">Back</a>
+                            </false>
+                        </check>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <check if="{{ @user->uid }}">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <i class="fa fa-gear fa-fw"></i> Change Password
+                    </div>
+                    <div class="panel-body">
+                        <form role="form" action="{{ @URI }}" method="POST">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input class="form-control" placeholder="New Password" name="pass" type="password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Repeat Password</label>
+                                <input class="form-control" placeholder="Re-enter Password" name="pass_confirmation" type="password" required>
+                            </div>
+                            <button class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </check>
+    </div>
+</div>
+OCS Panel Eng/view/admin/accounts.html0100777000000000000000000000653312732452445014740 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">SSH User List
+                <small>{{ @server->servername }}</small>
+                <a href="{{ @URI }}/add" class="btn btn-default pull-right"><i class="fa fa-plus fa-fw"></i> Add User</a>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-group fa-fw"></i> Account List
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Username</th>
+                                    <th>Create By</th>
+                                    <th>Exp</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <check if="{{ @users }}">
+                                    <true>
+                                        <repeat group="{{ @users }}" value="{{ @user }}" counter="{{ @no }}">
+                                            <tr>
+                                                <td>{{ @no }}</td>
+                                                <td>{{ @user->user }}</td>
+                                                <td>{{ @user->real }}</td>
+                                                <td>{{ @user->exp }}</td>
+                                                <td>
+                                                    <a href="{{ @URI.'/'.@user->uid }}" class="btn btn-primary">Edit</a>
+                                                    <check if="{{ @user->lock }}">
+                                                        <false>
+                                                            <a href="{{ @URI.'/'.@user->uid }}/active/0" class="btn btn-warning">Lock</a>
+                                                        </false>
+                                                        <true>
+                                                            <a href="{{ @URI.'/'.@user->uid }}/active/1" class="btn btn-success">Unlock</a>
+                                                        </true>
+                                                    </check>
+                                                  <!--  <a href="{{ @URI.'/'.@user->uid }}/delete" class="btn btn-danger hapus">Delete</a> -->
+                                                </td>
+                                             </tr>
+                                        </repeat>
+                                    </true>
+                                    <false>
+                                        <tr>
+                                            <td class="text-muted text-center" colspan="6"> No User</td>
+                                        </tr>
+                                    </false>
+                                </check>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/admin/seller.html0100777000000000000000000001125112732452445014400 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">
+                <check if="{{ @seller->id }}">
+                    <true>
+                        Edit Seller Account
+                        <a href="/home/admin/seller" class="btn btn-default pull-right"><i class="fa fa-arrow-left fa-fw"></i> Back</a>
+                    </true>
+                    <false>
+                        Add Seller
+                    </false>
+                </check>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-user fa-fw"></i> Account Details
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="{{ @URI }}" method="POST">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input class="form-control" placeholder="Username" name="username" type="text" value="{{ @seller->username }}" required>
+                        </div>
+                        <check if="{{ !@seller->id }}">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input class="form-control" placeholder="New Password" name="password" type="password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Repeat Password</label>
+                                <input class="form-control" placeholder="Re-enter Password" name="password_confirmation" type="password" required>
+                            </div>
+                        </check>
+                        <div class="form-group">
+                            <label>Credit</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">MYR. </span>
+                                <input class="form-control" placeholder="10" name="saldo" type="number" step="10" value="{{ @seller->saldo }}" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary">Save</button>
+                        <check if="{{ @seller->id }}">
+                            <true>
+                                <check if="{{ @seller->active==1 }}">
+                                    <true>
+                                        <a href="{{ @URI.'/active/0' }}" class="btn btn-warning">Lock</a>
+                                    </true>
+                                    <false>
+                                        <a href="{{ @URI.'/active/1' }}" class="btn btn-success">Unlock</a>
+                                    </false>
+                                </check>
+                                <a href="{{ @URI.'/delete' }}" class="btn btn-danger hapus">Delete</a>
+                            </true>
+                            <false>
+                                <a href="/home/admin/seller" class="btn btn-default">Back</a>
+                            </false>
+                        </check>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <check if="{{ @seller->id }}">
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <i class="fa fa-gear fa-fw"></i> Change Password
+                    </div>
+                    <div class="panel-body">
+                        <form role="form" action="{{ @URI }}" method="POST">
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input class="form-control" placeholder="New Password" name="password" type="password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Repeat Password</label>
+                                <input class="form-control" placeholder="Re-enter Password" name="passwordconfirmation" type="password" required>
+                            </div>
+                            <button class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </check>
+    </div>
+</div>
+OCS Panel Eng/view/admin/sellers.html0100777000000000000000000001046312732452450014563 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Seller List
+                <a href="/home/admin/seller/add" class="btn btn-default pull-right"><i class="fa fa-plus fa-fw"></i> Add Seller</a>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-8">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-group fa-fw"></i> Seller List
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Username</th>
+                                    <th>Credit</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <repeat group="{{ @sellers}}" value="{{ @seller }}" counter="{{ @no }}">
+                                    <tr>
+                                        <td>{{ @no }}</td>
+                                        <td>{{ @seller->username }}</td>
+                                        <td>{{ @seller->saldo }}</td>
+                                        <td>
+                                            <a href="/home/admin/seller/{{ @seller->id }}" class="btn btn-primary"></i>Edit</a>
+                                            <check if="{{ @seller->active==1 }}">
+                                                <true>
+                                                    <a href="/home/admin/seller/{{ @seller->id }}/active/0" class="btn btn-warning">Lock</a>
+                                                </true>
+                                                <false>
+                                                    <a href="/home/admin/seller/{{ @seller->id }}/active/1" class="btn btn-success">Unlock</a>
+                                                </false>
+                                            </check>
+                                           <!-- <a href="/home/admin/seller/{{ @seller->id }}/delete" class="btn btn-danger hapus">Delete</a> -->
+                                        </td>
+                                    </tr>
+                                </repeat>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-money fa-fw"></i> Quick Deposit
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="/home/admin/seller/deposit" method="POST">
+                        <div class="form-group">
+                            <label>Seller</label>
+                            <select class="form-control" name="id">
+                                <repeat group="{{ @sellers }}" value="{{ @seller }}">
+                                    <option value="{{ @seller->id }}">{{ @seller->username }}</option>
+                                </repeat>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Deposit</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">MYR. </span>
+                                <input class="form-control" placeholder="10" name="deposit" type="number" min="1" step="1" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Deposit</button>
+                        <button class="btn btn-default" type="reset">Reset</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/admin/sellers.html.save0100777000000000000000000001045612732452447015530 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Seller List
+                <a href="/home/admin/seller/add" class="btn btn-default pull-right"><i class="fa fa-plus fa-fw"></i> Add Seller</a>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-8">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-group fa-fw"></i> Seller List
+                </div>
+                <div class="panel-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Username</th>
+                                    <th>Credit</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <repeat group="{{ @sellers}}" value="{{ @seller }}" counter="{{ @no }}">
+                                    <tr>
+                                        <td>{{ @no }}</td>
+                                        <td>{{ @seller->username }}</td>
+                                        <td>{{ @seller->saldo }}</td>
+                                        <td>
+                                            <a href="/home/admin/seller/{{ @seller->id }}" class="btn btn-primary"></i>Edit</a>
+                                            <check if="{{ @seller->active==1 }}">
+                                                <true>
+                                                    <a href="/home/admin/seller/{{ @seller->id }}/active/0" class="btn btn-warning">Lock</a>
+                                                </true>
+                                                <false>
+                                                    <a href="/home/admin/seller/{{ @seller->id }}/active/1" class="btn btn-success">Unlock</a>
+                                                </false>
+                                            </check>
+                                            <a href="/home/admin/seller/{{ @seller->id }}/delete" class="btn btn-danger hapus">Delete</a>
+                                        </td>
+                                    </tr>
+                                </repeat>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-money fa-fw"></i> Quick Deposit
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="/home/admin/seller/deposit" method="POST">
+                        <div class="form-group">
+                            <label>Seller</label>
+                            <select class="form-control" name="id">
+                                <repeat group="{{ @sellers }}" value="{{ @seller }}">
+                                    <option value="{{ @seller->id }}">{{ @seller->username }}</option>
+                                </repeat>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Deposit</label>
+                            <div class="input-group">
+                                <span class="input-group-addon". </span>
+                                <input class="form-control" placeholder="10000" name="deposit" type="number" min="100" step="100" required>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit">Deposit</button>
+                        <button class="btn btn-default" type="reset">Reset</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/admin/server.html0100777000000000000000000000700412735537400014417 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">
+                <check if="{{ @server->id }}">
+                    <true>
+                        {{ @server->servername }}
+                    </true>
+                    <false>
+                        Add Server
+                    </false>
+                </check>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-gear fa-fw"></i> Server Settings
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="{{ @URI }}" method="POST">
+                        <div class="form-group">
+                            <label>Server Name</label>
+                            <input class="form-control" placeholder="Server Demo 1" name="servername" type="text" value="{{ @server->servername }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Server Country</label>
+                            <input class="form-control" placeholder="Singapore" name="country" type="text" value="{{ @server->country }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>IP / Host</label>
+                            <input class="form-control" placeholder="192.168.1.1 atau www.example-server.com" name="host" type="text" value="{{ @server->host }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Price / Month</label>
+                            <div class="input-group">
+                                <span class="input-group-addon">MYR. </span>
+                                <input class="form-control" placeholder="10" name="price" type="number" step="10" value="{{ @server->price }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Server Webmin Password</label>
+                            <input class="form-control" placeholder="r0oT_p4s5wo0rD" name="root_pass" type="password">
+                        </div>
+                        <button class="btn btn-primary">Save</button>
+                        <check if="{{ @server->id }}">
+                            <check if="{{ @server->active==1 }}">
+                                <true>
+                                    <a href="{{ @URI.'/active/0' }}" class="btn btn-warning">Lock</a>
+                                </true>
+                                <false>
+                                    <a href="{{ @URI.'/active/1' }}" class="btn btn-success">Unlock</a>
+                                </false>
+                            </check>
+                            <a href="{{ @URI.'/delete' }}" class="btn btn-danger hapus">Delete</a>
+                        </check>
+                        <a href="/home/admin/server" class="btn btn-default">Back</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/admin/servers.html0100777000000000000000000000333212732452446014605 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Server List
+                <a href="{{ @URI }}/add" class="btn btn-default pull-right"><i class="fa fa-plus fa-fw"></i> Add Server</a>
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <repeat group="{{ @servers }}" value="{{ @server }}">
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <b>{{ @server->servername }}</b> {{ @server->active==1?'':'( Locked )'}}
+                    </div>
+                    <table class="table">
+                        <tr>
+                            <td>Location</td><td>{{ @server->country }}</td>
+                        </tr>
+                        <tr>
+                            <td>Host</td><td>{{ @server->host }}</td>
+                        </tr>
+                        <tr>
+                            <td>Price</td><td>{{ @server->price }}</td>
+                        </tr>
+                    </table>
+                    <div class="panel-footer text-center">
+                        <a href="{{ @URI.'/'.@server->id }}" class="btn btn-primary"><i class="fa fa-edit fa-fw"></i> Edit</a>
+                        <a href="{{ @URI.'/'.@server->id }}/account" class="btn btn-default"><i class="fa fa-group fa-fw"></i> Check User</a>
+                    </div>
+                </div>
+            </div>
+        </repeat>
+    </div>
+</div>
+OCS Panel Eng/view/base.html0100777000000000000000000000524612732452451012740 0ustar00<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>OCS Panels</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/metisMenu/2.0.0/metisMenu.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <link href="/asset/css/sb-admin-2.css" rel="stylesheet">
+    <link href="/asset/css/bootstrap-datepicker3.min.css" rel="stylesheet">
+    <link href="/asset/css/bootstrap-dialog.min.css" rel="stylesheet">
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body>
+    <include href="{{ @content}} "/>
+    <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/metisMenu/2.0.0/metisMenu.min.js"></script>
+    <script src="/asset/js/sb-admin-2.js"></script>
+    <script src="/asset/js/bootstrap-datepicker.min.js"></script>
+    <script src="/asset/js/bootstrap-dialog.min.js"></script>
+    <script type="text/javascript">
+        $('.input-group.date').datepicker({
+            format: "yyyy/mm/dd",
+            weekStart: 1,
+            clearBtn: true,
+            language: "id",
+            autoclose: true,
+            todayHighlight: true
+        });
+        $('.hapus').click(function(e) {
+            e.preventDefault();
+            BootstrapDialog.confirm({
+                title: 'Confirm',
+                message: ' Are You Sure ?',
+                type: BootstrapDialog.TYPE_DANGER,
+                closable: true,
+                btnCancelLabel: 'Cancel',
+                btnOKLabel: 'Delete',
+                btnOKClass: 'btn-danger',
+                callback: function(result) {
+                    if(result) {
+                        location.href = $('.hapus').attr('href');
+                    }
+                }
+            });
+        });
+        function print_report() {
+            window.print();
+            return false;
+        }
+    </script>
+</body>
+</html>
+OCS Panel Eng/view/home.html0100777000000000000000000000516512732452454012761 0ustar00<div id="wrapper">
+    <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/home"><i class="fa fa-dashboard fa-lg fa-fw"></i> OCS Panels</a>
+        </div>
+
+        <div class="navbar-default sidebar" role="navigation">
+            <div class="sidebar-nav navbar-collapse">
+                <ul class="nav" id="side-menu">
+                    <li class="sidebar-search">
+                        <div class="row">
+                            <div class="col-xs-5">
+                                <span class="fa-stack fa-3x">
+                                    <i class="fa fa-circle fa-stack-2x"></i>
+                                    <i class="fa fa-user fa-stack-1x fa-inverse"></i>
+                                </span>
+                            </div>
+                            <div class="col-xs-7">
+                                <h4><b>{{ @me->username }}</b></h4>
+                                <h4 class="text-muted">{{ @me->type==1?'Admin':'Seller' }}</h4>
+                            </div>
+                        </div>
+                    </li>
+
+                    <check if="{{ @me->type==1 }}">
+                        <true>
+                            <li>
+                                <a href="/home/admin/server"><i class="fa fa-th-list fa-fw"></i> Server</a>
+                            </li>
+                            <li>
+                                <a href="/home/admin/seller"><i class="fa fa-group fa-fw"></i> Seller</a>
+                            </li>
+                        </true>
+                        <false>
+                            <li>
+                                <a href="/home/member/server"><i class="fa fa-shopping-cart fa-fw"></i> Buy SSH Account</a>
+                            </li>
+                        </false>
+                    </check>
+                    <li>
+                        <a href="/home/setting"><i class="fa fa-gear fa-fw"></i> Setting</a>
+                    </li>
+                    <li>
+                        <a href="/logout"><i class="fa fa-sign-out fa-fw"></i> Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <include href="{{ @subcontent }}"/>
+</div>OCS Panel Eng/view/login.html0100777000000000000000000000352412732452451013133 0ustar00<section id="#login">
+    <div class="container">
+        <div class="row ver-parent">
+            <div class="col-md-4 col-md-offset-4 ver-center">
+                <check if="{{ @message }}">
+                    <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+                </check>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title"><i class="fa fa-sign-in fa-fw"></i> Please Login First</h3>
+                    </div>
+                    <div class="panel-body">
+                        <form role="form" action="/login" method="POST">
+                            <fieldset>
+                                <div class="form-group">
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><i class="fa fa-user fa-fw"></i></span>
+                                        <input class="form-control" placeholder="Username" name="username" type="text" autofocus required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="input-group">
+                                        <span class="input-group-addon"><i class="fa fa-key fa-fw"></i></span>
+                                        <input class="form-control" placeholder="Password" name="password" type="password" required>
+                                    </div>
+                                </div>
+                                <button class="btn btn-lg btn-success btn-block">Login</button>
+                            </fieldset>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+OCS Panel Eng/view/member/0040777000000000000000000000000012734456555012413 5ustar00OCS Panel Eng/view/member/account.html0100777000000000000000000000372412732452452014731 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">
+                SSH Account
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12 hidden-print">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-user fa-fw"></i> Account Details
+                </div>
+                <table class="table table-hover">
+                    <tbody>
+                        <tr>
+                            <td>Username</td><td>{{ @user->user }}</td>
+                        </tr>
+                        <tr>
+                            <td>Password</td><td>{{ @user->pass }}</td>
+                        </tr>
+                        <tr>
+                            <td>Host</td><td>{{ @server->host }}</td>
+                        </tr>
+                        <tr>
+                            <td>Location</td><td>{{ @server->country }}</td>
+                        </tr>
+                        <tr>
+                            <td>Price</td><td>{{ @server->price }}</td>
+                        </tr>
+                        <tr>
+                            <td>Exp</td><td>{{ \Webmin::exp_decode(@user->expire) }}</td>
+                        </tr>
+                        <tr class="hidden-print">
+                            <td colspan="2">
+                                <a href="#" class="btn btn-primary" onclick="print_report()">Print</a>
+                                <a href="/home/member/server" class="btn btn-default">Back</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/member/server.html0100777000000000000000000000573212734456555014616 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">
+                {{ @server->servername }}
+            </h1>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">                    
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <div class="col-md-4 col-lg-3">
+            <div class="row">
+                <div class="col-xs-6 col-md-12">
+                    <div class="well">Credit : <B>{{ @me->saldo }}</B></div>                    
+                </div>
+                <div class="clearfix"></div>
+                <div class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <b>{{ @server->servername }}</b> {{ @server->active==1?'':'( Locked )'}}
+                        </div>
+                        <table class="table">
+                            <tr>
+                                <td>Location</td><td>{{ @server->country }}</td>
+                            </tr>
+                            <tr>
+                                <td>Host</td><td>{{ @server->host }}</td>
+                            </tr>
+                            <tr>
+                                <td>Price</td><td>{{ @server->price }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-shopping-cart fa-fw"></i> Server Settings
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="{{ @URI }}" method="POST">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input class="form-control" placeholder="abc123" name="user" type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input class="form-control" placeholder="Password" name="pass" type="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Repeat Password</label>
+                            <input class="form-control" placeholder="Re-enter Password" name="pass_confirmation" type="password" required>
+                        </div>
+                        <button class="btn btn-primary">Save</button>
+                        <a href="/home/member/server" class="btn btn-default">Back</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+OCS Panel Eng/view/member/servers.html0100777000000000000000000000343412732452453014765 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Server List</h1>
+        </div>
+    </div>
+    <div class="row">
+       <div class="col-xs-6 col-md-5 col-md-4 col-lg-3">
+            <div class="well">Credit : <B>{{ @me->saldo }}</B></div>
+        </div>
+    </div>
+    <div class="row">
+        <check if="{{ @message }}">
+            <div class="col-lg-12">
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </div>
+        </check>
+        <repeat group="{{ @servers}}" value="{{ @server }}">
+            <div class="col-sm-6 col-md-4 col-lg-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <b>{{ @server->servername }}</b> {{ @server->active==1?'':'( Locked )'}}
+                    </div>
+                    <table class="table">
+                        <tr>
+                            <td>Location</td><td>{{ @server->country }}</td>
+                        </tr>
+                        <tr>
+                            <td>Host</td><td>{{ @server->host }}</td>
+                        </tr>
+                        <tr>
+                            <td>Price</td><td>{{ @server->price }}</td>
+                        </tr>
+                    </table>
+                    <div class="panel-footer text-center">
+                        <a href="{{ @URI.'/'.@server->id }}" class="btn btn-primary"><i class="fa fa-shopping-cart fa-fw"></i> Buy</a>
+                        <!-- <a href="http://{{ @server->host }}:81/vpn-config.rar" class="btn btn-default"><i class="fa fa-download fa-fw"></i> VPN Config</a> -->
+                    </div>
+                </div>
+            </div>
+        </repeat>
+    </div>
+</div>
+OCS Panel Eng/view/setting.html0100777000000000000000000000315012732452450013472 0ustar00<div id="page-wrapper">
+    <div class="row">
+        <div class="col-lg-12">
+            <h1 class="page-header">Setting</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <check if="{{ @message }}">
+                <div class="alert alert-{{ @message['type'] }}">{{ @message['data'] }}</div>
+            </check>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <i class="fa fa-gear fa-fw"></i> Change Password
+                </div>
+                <div class="panel-body">
+                    <form role="form" action="{{ @URI }}" method="POST">
+                        <div class="form-group">
+                            <label>Old Password</label>
+                            <input class="form-control" placeholder="Old Password" name="oldpass" type="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input class="form-control" placeholder="New Password" name="password" type="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Repeat New Password</label>
+                            <input class="form-control" placeholder="Re-enter New Password" name="password_confirmation" type="password" required>
+                        </div>
+                        <button class="btn btn-primary">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
