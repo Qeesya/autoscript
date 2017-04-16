@@ -145,7 +145,7 @@ mv ./motd /etc/motd
 #ssh
 sed -i 's/#Banner/Banner/g' /etc/ssh/sshd_config
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
-wget -O /etc/issue.net " https://raw.githubusercontent.com/zero9911/script/master/script/banner"
+wget -O /etc/issue.net " https://raw.githubusercontent.com/Qeesya/script/master/script/banner"
 
 clear
 echo 
