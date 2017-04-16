@@ -208,7 +208,7 @@ clear
 
 echo "===============================================--"
 echo "                             "
-echo "  === AUTOSCRIPT FROM MuLuu09 === "
+echo "  === AUTOSCRIPT FROM MuLuu(MappakkoE === "
 echo "WEBMIN : http://$myip:10000 "
 echo "OPENVPN PORT : 59999"
 echo "DROPBEAR PORT : 22,443"
@@ -219,7 +219,7 @@ echo "TORRENT PORT HAS BLOCK BY SCRIPT"
 echo "CONTACT OWNER SCRIPT"
 echo "WHATSAPP : +601131731782"
 echo "TELEGRAM : @MuLuu09"
-
+echo "For SWAP RAM PLEASE CONTACT OWNER"
 echo "  === PLEASE REBOOT TAKE EFFECT  ===  "
 echo "                                  "
 echo "=================================================="
