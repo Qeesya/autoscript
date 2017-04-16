@@ -109,34 +109,31 @@ apt-get -y install aptitude curl
 if [ "$IP" = "" ]; then
         IP=$(curl -s ifconfig.me)
 fi
+#installing squid3
+aptitude -y install squid3
+rm -f /etc/squid3/squid.conf
+
+#restoring squid config with open port proxy 8080,7166
+wget -P /etc/squid3/ "https://raw.githubusercontent.com/Qeesya/autoscript/master/script/squid.conf"
+sed -i "s/$myip/$IP/g" /etc/squid3/squid.conf
+service squid3 restart
+cd
+
+#install vnstat
+apt-get -y install vnstat
+vnstat -u -i eth0
+sudo chown -R vnstat:vnstat /var/lib/vnstat
+service vnstat restart
+
 # config upload
 wget -O /home/vps/public_html/client.ovpn " https://raw.githubusercontent.com/Qeesya/script/master/script/max.ovpn"
 sed -i "s/ipserver/$myip/g" /home/vps/public_html/max.ovpn
 cd
 
 
-#installing squid3
-aptitude -y install squid3
-rm -f /etc/squid3/squid.conf
-#restoring squid config with open port proxy 3128, 7166, 8080
-wget -P /etc/squid3/ "https://raw.githubusercontent.com/Qeesya/autoscript/master/script/squid.conf"
-sed -i "s/ipserver/$IP/g" /etc/squid3/squid.conf
-service squid3 restart
-cd
 
-# install vnstat gui
-cd /home/vps/public_html/
-wget http://raw.github.com/MuLuu09/conf/master/vnstat_php_frontend-1.5.1.tar.gz
-tar xf vnstat_php_frontend-1.5.1.tar.gz
-rm vnstat_php_frontend-1.5.1.tar.gz
-mv vnstat_php_frontend-1.5.1 vnstat
-cd vnstat
-sed -i "s/\$iface_list = array('eth0', 'sixxs');/\$iface_list = array('eth0');/g" config.php
-sed -i "s/\$language = 'nl';/\$language = 'en';/g" config.php
-sed -i 's/Internal/Internet/g' config.php
-sed -i '/SixXS IPv6/d' config.php
-sed -i "s/\$locale = 'en_US.UTF-8';/\$locale = 'en_US.UTF+8';/g" config.php
-cd
+
+
 
 clear
 echo "
