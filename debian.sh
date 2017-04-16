@@ -130,17 +130,15 @@ echo "/bin/false" » /etc/shells
 service ssh restart
 service dropbear restart
 
-#installing webmin
-wget http://www.webmin.com/jcameron-key.asc
-apt-key add jcameron-key.asc
-echo "deb http://download.webmin.com/download/repository sarge contrib" >> /etc/apt/sources.list
-echo "deb http://webmin.mirror.somersettechsolutions.co.uk/repository sarge contrib" >> /etc/apt/sources.list
-apt-get update
-apt-get -y install webmin
-#disable webmin https
-sed -i "s/ssl=1/ssl=0/g" /etc/webmin/miniserv.conf
-/etc/init.d/webmin restart
-service openvpn-nl restart
+# install webmin
+cd
+wget "http://prdownloads.sourceforge.net/webadmin/webmin_1.820_all.deb"
+dpkg --install webmin_1.820_all.deb;
+apt-get -y -f install;
+rm /root/webmin_1.820_all.deb
+sed -i 's/ssl=1/ssl=0/g' /etc/webmin/miniserv.conf
+service webmin restart
+service vnstat restart
 
 cd
 
@@ -148,6 +146,49 @@ cd
 wget https://raw.githubusercontent.com/Qeesya/autoscript/master/script/swap-ram.sh
 chmod +x  swap-ram.sh
 ./swap-ram.sh
+
+# User Status
+cd
+wget http://raw.github.com/MuLuu09/conf/master/user-list
+mv ./user-list /usr/local/bin/user-list
+chmod +x /usr/local/bin/user-list
+
+# Install Dos Deflate
+apt-get -y install dnsutils dsniff
+wget http://raw.github.com/MuLuu09/autoscript/master/ddos-deflate-master.zip
+unzip master.zip
+cd ddos-deflate-master
+./install.sh
+cd
+
+# Install SSH autokick
+cd
+wget http://raw.github.com/MuLuu09/conf/master/Autokick-debian.sh
+bash Autokick-debian.sh
+
+
+# Install Monitor
+cd
+wget http://raw.github.com/MuLuu09/conf/master/monssh; 
+mv monssh /usr/local/bin/; 
+chmod +x /usr/local/bin/monssh
+
+
+# Install Menu
+cd
+wget http://raw.github.com/MuLuu09/conf/master/menu
+mv ./menu /usr/local/bin/menu
+chmod +x /usr/local/bin/menu
+
+# moth
+cd
+wget wget http://raw.github.com/MuLuu09/conf/master/motd
+mv ./motd /etc/motd
+#ssh
+sed -i 's/#Banner/Banner/g' /etc/ssh/sshd_config
+sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
+wget -O /etc/issue.net " https://raw.githubusercontent.com/Qeesya/script/master/script/banner"
+
 
 clear
 
@@ -161,12 +202,22 @@ chmod +x  torrent.sh
 ./torrent.sh
 
 clear
-echo "
-COMPLET 100%
-DONE.
-"
+echo "COMPLETE 100%"
+
+echo "RESTART SERVICE"
+service openvpn-nl restart
+service squid3 restart
+service vnstat restart
+service webmin restart
+service dropbear restart
+service ssh restart
+echo " DONE RESTART SERVICE"
+
+clear
+
+
 echo "========================================"  | tee -a log-install.txt
-echo "MuLuu09"  | tee -a log-install.txt
+echo "AutoScript By MuLuu09"  | tee -a log-install.txt
 echo "----------------------------------------"  | tee -a log-install.txt
 echo ""  | tee -a log-install.txt
 echo "Webmin : http://$myip:10000/"  | tee -a log-install.txt
