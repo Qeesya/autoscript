@@ -36,6 +36,20 @@ CHECK AND INSTALL IT
 COMPLETE 1%
 "
 apt-get -y install wget curl
+
+# install webserver
+apt-get -y install nginx php5-fpm php5-cli
+
+# install essential package
+apt-get -y install nmap nano iptables sysv-rc-conf openvpn vnstat apt-file
+apt-get -y install libexpat1-dev libxml-parser-perl
+apt-get -y install build-essential
+
+# Setting Vnstat
+vnstat -u -i eth0
+chown -R vnstat:vnstat /var/lib/vnstat
+service vnstat restart
+
 clear
 echo "
 INSTALL COMMANDS
@@ -110,11 +124,19 @@ sed -i "s/ipserver/$IP/g" /etc/squid3/squid.conf
 service squid3 restart
 cd
 
-#install vnstat
-apt-get -y install vnstat
-vnstat -u -i eth0
-sudo chown -R vnstat:vnstat /var/lib/vnstat
-service vnstat restart
+# install vnstat gui
+cd /home/vps/public_html/
+wget http://raw.github.com/MuLuu09/conf/master/vnstat_php_frontend-1.5.1.tar.gz
+tar xf vnstat_php_frontend-1.5.1.tar.gz
+rm vnstat_php_frontend-1.5.1.tar.gz
+mv vnstat_php_frontend-1.5.1 vnstat
+cd vnstat
+sed -i "s/\$iface_list = array('eth0', 'sixxs');/\$iface_list = array('eth0');/g" config.php
+sed -i "s/\$language = 'nl';/\$language = 'en';/g" config.php
+sed -i 's/Internal/Internet/g' config.php
+sed -i '/SixXS IPv6/d' config.php
+sed -i "s/\$locale = 'en_US.UTF-8';/\$locale = 'en_US.UTF+8';/g" config.php
+cd
 
 clear
 echo "
