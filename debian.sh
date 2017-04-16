@@ -22,7 +22,7 @@ if [ $USER != 'root' ]; then
 	exit
 fi
 echo "
-== MKSSHVPN SYSTEM SCRIPT ==
+== MuLuu09==
 PLEASE CANCEL ALL PACKAGE POPUP
 TAKE NOTE !!!"
 clear
@@ -95,7 +95,7 @@ apt-get -y install aptitude curl
 if [ "$IP" = "" ]; then
         IP=$(curl -s ifconfig.me)
 fi
-config upload
+# config upload
 wget -O /home/vps/public_html/client.ovpn " https://raw.githubusercontent.com/Qeesya/script/master/script/max.ovpn"
 sed -i "s/ipserver/$myip/g" /home/vps/public_html/max.ovpn
 cd
