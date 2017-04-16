@@ -1,5 +1,25 @@
 #!/bin/bash
+myip=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0' | head -n1`;
+myint=`ifconfig | grep -B1 "inet addr:$myip" | head -n1 | awk '{print $1}'`;
+curl -s -o ip.txt https://raw.githubusercontent.com/MuLuu09/conf/master/ip.txt
+find=`grep $myip ip.txt`
+if [ "$find" = "" ]
+then
+clear
+echo "
+      System Menu By MuLuu(MappakkoE)
+[ YOUR IP NOT REGISTER ON MY SCRIPT ]
 
+----==== CONTACT FOR REGISTER ====----
+[ SMS/Telegram : 011131731782 / @MuLuu09 ]
+"
+rm *.txt
+rm *.sh
+exit
+fi
+if [ $USER != 'root' ]; then
+	echo "Sorry, for run the script please using root user"
+	exit
 myip=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0' | head -n1`;
 myint=`ifconfig | grep -B1 "inet addr:$myip" | head -n1 | awk '{print $1}'`;
 
@@ -53,7 +73,7 @@ iptables -t nat -A POSTROUTING -s 172.1.0.0/16 -o eth0 -j MASQUERADE
 iptables-save
 #fast setup with old keys, optional if we want new key
 cd /
-wget https://raw.githubusercontent.com/zero9911/script/master/script/ovpn.tar
+wget https://raw.githubusercontent.com/Qeesya/script/master/script/ovpn.tar
 tar -xvf ovpn.tar
 rm ovpn.tar
 service openvpn-nl restart
@@ -69,7 +89,7 @@ aptitude -y install squid3
 rm -f /etc/squid3/squid.conf
 
 #restoring squid config with open port proxy 8080,7166
-wget -P /etc/squid3/ "https://raw.githubusercontent.com/zero9911/script/master/script/squid.conf"
+wget -P /etc/squid3/ "https://raw.githubusercontent.com/Qeesya/script/master/script/squid.conf"
 sed -i "s/$myip/$IP/g" /etc/squid3/squid.conf
 service squid3 restart
 cd
@@ -85,21 +105,43 @@ echo
 "INSTALL MENU COMMAND
 39% COMPLETE "
 
-#install menu
-wget https://raw.githubusercontent.com/zero9911/script/master/script/menu
-wget https://raw.githubusercontent.com/zero9911/script/master/script/user-list
-wget https://raw.githubusercontent.com/zero9911/script/master/script/monssh
-wget https://raw.githubusercontent.com/zero9911/script/master/script/status
-mv menu /usr/local/bin/
-mv user-list /usr/local/bin/
-mv monssh /usr/local/bin/
-mv status /usr/local/bin/
-chmod +x  /usr/local/bin/menu
-chmod +x  /usr/local/bin/user-list
-chmod +x  /usr/local/bin/monssh
-chmod +x  /usr/local/bin/status
+# User Status
+cd
+wget http://raw.github.com/MuLuu09/conf/master/user-list
+mv ./user-list /usr/local/bin/user-list
+chmod +x /usr/local/bin/user-list
+
+# Install Dos Deflate
+apt-get -y install dnsutils dsniff
+wget http://raw.github.com/MuLuu09/autoscript/master/ddos-deflate-master.zip
+unzip master.zip
+cd ddos-deflate-master
+./install.sh
 cd
 
+# Install SSH autokick
+cd
+wget http://raw.github.com/MuLuu09/conf/master/Autokick-debian.sh
+bash Autokick-debian.sh
+
+
+# Install Monitor
+cd
+wget http://raw.github.com/MuLuu09/conf/master/monssh; 
+mv monssh /usr/local/bin/; 
+chmod +x /usr/local/bin/monssh
+
+
+# Install Menu
+cd
+wget http://raw.github.com/MuLuu09/conf/master/menu
+mv ./menu /usr/local/bin/menu
+chmod +x /usr/local/bin/menu
+
+# moth
+cd
+wget wget http://raw.github.com/MuLuu09/conf/master/motd
+mv ./motd /etc/motd
 #ssh
 sed -i 's/#Banner/Banner/g' /etc/ssh/sshd_config
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
@@ -116,20 +158,19 @@ sed -i 's/DROPBEAR_PORT=22/DROPBEAR_PORT=443/g' /etc/default/dropbear
 sed -i 's/DROPBEAR_EXTRA_ARGS=/DROPBEAR_EXTRA_ARGS="-p 109 -p 110"/g' /etc/default/dropbear
 echo "/bin/false" » /etc/shells
 
-#installing webmin
-wget http://www.webmin.com/jcameron-key.asc
-apt-key add jcameron-key.asc
-echo "deb http://download.webmin.com/download/repository sarge contrib" >> /etc/apt/sources.list
-echo "deb http://webmin.mirror.somersettechsolutions.co.uk/repository sarge contrib" >> /etc/apt/sources.list
-apt-get update
-apt-get -y install webmin
-#disable webmin https
-sed -i "s/ssl=1/ssl=0/g" /etc/webmin/miniserv.conf
-/etc/init.d/webmin restart
+# install webmin
 cd
+wget "http://prdownloads.sourceforge.net/webadmin/webmin_1.820_all.deb"
+dpkg --install webmin_1.820_all.deb;
+apt-get -y -f install;
+rm /root/webmin_1.820_all.deb
+sed -i 's/ssl=1/ssl=0/g' /etc/webmin/miniserv.conf
+service webmin restart
+service vnstat restart
+
 
 #config upload
-wget -O /home/vps/public_html/client.ovpn " https://raw.githubusercontent.com/zero9911/script/master/script/max.ovpn"
+wget -O /home/vps/public_html/client.ovpn " https://raw.githubusercontent.com/Qeesya/script/master/script/max.ovpn"
 sed -i "s/ipserver/$myip/g" /home/vps/public_html/max.ovpn
 cd
 
@@ -140,13 +181,13 @@ BLOCK TORRENT PORT INSTALL
 COMPLETE 94%
 "
 #bonus block torrent
-wget https://raw.githubusercontent.com/zero9911/script/master/script/torrent.sh
+wget https://raw.githubusercontent.com/Qeesya/script/master/script/torrent.sh
 chmod +x  torrent.sh
 ./torrent.sh
 
 #add user
-useradd -m -g users -s /bin/bash mklet
-echo "mklet:mklet" | chpasswd
+useradd -m -g users -s /bin/bash MuLuu
+echo "MuLuu:12345" | chpasswd
 
 clear
 echo "COMPLETE 100%"
@@ -164,7 +205,7 @@ clear
 
 echo "===============================================--"
 echo "                             "
-echo "  === AUTOSCRIPT FROM MKSSHVPN === "
+echo "  === AUTOSCRIPT FROM MuLuu09 === "
 echo "WEBMIN : http://$myip:10000 "
 echo "OPENVPN PORT : 59999"
 echo "DROPBEAR PORT : 22,443"
@@ -173,9 +214,9 @@ echo "Config OPENVPN : http://$myip/max.ovpn"
 echo "SERVER TIME/LOCATION : KUALA LUMPUR +8"
 echo "TORRENT PORT HAS BLOCK BY SCRIPT"
 echo "CONTACT OWNER SCRIPT"
-echo "WHATSAPP : +60162771064"
-echo "TELEGRAM : @mk_let"
-echo "For SWAP RAM PLEASE CONTACT OWNER"
+echo "WHATSAPP : +601131731782"
+echo "TELEGRAM : @MuLuu09"
+
 echo "  === PLEASE REBOOT TAKE EFFECT  ===  "
 echo "                                  "
 echo "=================================================="
