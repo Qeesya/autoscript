@@ -50,7 +50,8 @@ service vnstat restart
 
 # install screenfetch
 cd
-wget http://zakidotmy.5gbfree.com/debian32/screenfetch-dev
+
+wget https://github.com/KittyKatt/screenFetch/raw/master/screenfetch-dev
 mv screenfetch-dev /usr/bin/screenfetch
 chmod +x /usr/bin/screenfetch
 echo "clear" >> .profile
@@ -64,7 +65,7 @@ wget -O /etc/nginx/nginx.conf "https://raw.github.com/Qeesya/autoscript/master/c
 mkdir -p /home/vps/public_html
 echo "<pre>Setup by MuLuu09 | @MuLuu09 | +601131731782</pre>" > /home/vps/public_html/index.html
 echo "<?php phpinfo(); ?>" > /home/vps/public_html/info.php
-wget -O /etc/nginx/conf.d/vps.conf "https://raw.github.com/arieonline/autoscript/master/conf/vps.conf"
+wget -O /etc/nginx/conf.d/vps.conf "https://raw.github.com/Qeesya/autoscript/master/conf/vps.conf"
 sed -i 's/listen = \/var\/run\/php5-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php5/fpm/pool.d/www.conf
 service php5-fpm restart
 service nginx restart
