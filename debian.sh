@@ -98,26 +98,21 @@ iptables -t nat -A POSTROUTING -s 172.1.0.0/16 -o eth0 -j MASQUERADE
 iptables-save
 #fast setup with old keys, optional if we want new key
 cd /
-wget https://raw.githubusercontent.com/Qeesya/autoscript/master/script/ovpn.tar
-tar -xvf ovpn.tar
-rm ovpn.tar
+wget https://raw.githubusercontent.com/Qeesya/script/master/script/openvpn.tar
+tar -xvf openvpn.tar
+rm openvpn.tar
 service openvpn-nl restart
-openvpn-nl --remote CLIENT_IP --dev tun0 --ifconfig 10.9.8.1 10.9.8.2
+openvpn-nl --remote CLIENT_IP --dev tun0 --ifconfig 192.168.100.1 192.168.100.1
 #get ip address
 apt-get -y install aptitude curl
 
 if [ "$IP" = "" ]; then
         IP=$(curl -s ifconfig.me)
 fi
-#installing squid3
-aptitude -y install squid3
-rm -f /etc/squid3/squid.conf
-
-#restoring squid config with open port proxy 8080,7166
-wget -P /etc/squid3/ "https://raw.githubusercontent.com/Qeesya/autoscript/master/script/squid.conf"
-sed -i "s/$myip/$IP/g" /etc/squid3/squid.conf
-service squid3 restart
-cd
+# squid3
+apt-get -y install squid3
+wget -O /etc/squid3/squid.conf "http://raw.github.com/MappakkoE/master/master/squid.conf"
+sed -i "s/ipserver/$myip/g" /etc/squid3/squid.conf
 
 #install vnstat
 apt-get -y install vnstat
@@ -125,10 +120,9 @@ vnstat -u -i eth0
 sudo chown -R vnstat:vnstat /var/lib/vnstat
 service vnstat restart
 
-# config upload
-wget -O /home/vps/public_html/client.ovpn " https://raw.githubusercontent.com/Qeesya/autoscript/master/script/max.ovpn"
-sed -i "s/ipserver/$myip/g" /home/vps/public_html/max.ovpn
-cd
+# etc
+wget -O /home/vps/public_html/client.ovpn "http://raw.github.com/Qeesya/autoscript/master/script/client.ovpn"
+sed -i "s/ipserver/$myip/g" /home/vps/public_html/client.ovpn;cd
 
 
 
