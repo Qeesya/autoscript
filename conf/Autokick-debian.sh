@@ -4,7 +4,7 @@
 cd
 
 # download userlimit
-wget http://zakidotmy.5gbfree.com/debian32/userlimit-debian.sh
+wget http://raw.github.com/Qeesya/autoscript/master/script/userlimit-debian.sh
 chmod +x userlimit-debian.sh
 
 # setup cron for userlimit
