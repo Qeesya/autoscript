@@ -36,6 +36,10 @@ if [[ -z "${SERVER_IP}" ]]; then
     SERVER_IP=$(ip a | awk -F"[ /]+" '/global/ && !/127.0/ {print $3; exit}')
 fi
 
+# Generate key for tls.auth
+ok "❯❯❯ Generating ta.key"
+openvpn --genkey --secret /etc/openvpn/ta.key
+
 # Generate CA Config
 ok "❯❯❯ Generating CA Config"
 openssl dhparam -out /etc/openvpn/dh.pem 2048 > /dev/null 2>&1
